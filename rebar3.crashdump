@@ -1,0 +1,7 @@
+multiple_app_files: ["/home/joq62/erlang/infra_2/oam_db/_build/default/lib/db/ebin/common.app",
+                     "/home/joq62/erlang/infra_2/oam_db/_build/default/lib/db/ebin/config.app",
+                     "/home/joq62/erlang/infra_2/oam_db/_build/default/lib/db/ebin/db.app",
+                     "/home/joq62/erlang/infra_2/oam_db/_build/default/lib/db/ebin/nodelog.app",
+                     "/home/joq62/erlang/infra_2/oam_db/_build/default/lib/db/ebin/sd.app"]
+[]
+

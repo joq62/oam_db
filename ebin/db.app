@@ -1,0 +1,10 @@
+{application,db,
+             [{description,"An OTP application"},
+              {vsn,"0.1.0"},
+              {registered,[]},
+              {mod,{db_app,[]}},
+              {applications,[kernel,stdlib]},
+              {env,[]},
+              {modules,[db,db_app,db_oam,db_sup,dynamic_db,lib_etcd]},
+              {licenses,["Apache 2.0"]},
+              {links,[]}]}.
