@@ -18,6 +18,9 @@
 %-compile(export_all).
 
 -export([
+	 create_cluster/4,
+	 delete_cluster/4,
+
 	 create_dir/2,
 	 load_start_node_w_basic_appls/4,
 	 create_cluster_node_info/4
@@ -40,7 +43,91 @@
 %% ====================================================================
 %% External functions
 %% ====================================================================
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% --------------------------------------------------------------------
+create_cluster(ClusterName,NumNodesPerHost,HostNames,Cookie)->
+    io:format("DBG: ~p~n",[{"Start of ",?MODULE,?FUNCTION_NAME,?LINE}]),
+
+    StartedNodesResult=[create_cluster_on_host(ClusterName,NumNodesPerHost,HostName,Cookie)||HostName<-HostNames],
+    io:format("DBG: StartedNodesResult ~p~n",[{StartedNodesResult,?MODULE,?FUNCTION_NAME,?LINE}]),
+    
+    % Ensure connected
+    Reply=case StartedNodesResult of
+	      []->
+		  {error,["No nodes started ",?MODULE,?FUNCTION_NAME,?LINE]};
+	      _->
+		  StartedNodes=lists:append([NodeInfoList||{ok,NodeInfoList}<-StartedNodesResult]),
+		  [FirstNodeInfo|T]=StartedNodes,
+		  io:format("DBG: FirstNodeInfo ~p~n",[{FirstNodeInfo,?MODULE,?FUNCTION_NAME,?LINE}]),
+		  FirstNode=proplists:get_value(node,FirstNodeInfo),
+		  %glur=FirstNode,
+		  Ping=[{FirstNode,proplists:get_value(node,NodeInfo),rpc:call(FirstNode,net_adm,ping,[proplists:get_value(node,NodeInfo)])}||NodeInfo<-T],
+		  io:format("DBG: Ping ~p~n",[{Ping,?MODULE,?FUNCTION_NAME,?LINE}]),
+		  {ok,StartedNodesResult}
+	  end,
+%    Errors=[{error,Reason}||{error,Reason}<-StartedNodes],   
+%    case Errors of
+%	[]->
+%	    glurk;
+%	_->
+%	    glurk
+ %   end,
+    Reply.
+
+create_cluster_on_host(ClusterName,NumNodesPerHost,HostName,Cookie)->
+    ClusterDir=ClusterName++".dir",
+    Reply=case create_dir(HostName,ClusterDir) of
+	      {error,Reason}->
+		  {error,Reason};
+	      ok->
+		  io:format("DBG: CreateClusterDir ~p~n",[{HostName, ClusterDir,?MODULE,?FUNCTION_NAME,?LINE}]),
+	          NodeInfoList=create_node_info(NumNodesPerHost,ClusterName,HostName,ClusterDir,Cookie,[]),
+		  CreateNodeDir=[create_dir(HostName,proplists:get_value(node_dir,NodeInfo))||NodeInfo<-NodeInfoList],
+		  ErrorCreateNodeDir=[{error,Reason}||{error,Reason}<-CreateNodeDir],
+		  case ErrorCreateNodeDir of
+		      []-> %ok
+			  io:format("DBG: CreateNodeDir ~p~n",[{HostName, CreateNodeDir,?MODULE,?FUNCTION_NAME,?LINE}]),
+			  LoadStartNodeBasicAppls=[load_start_node_w_basic_appls(HostName,
+										 proplists:get_value(nodename,NodeInfo),
+										 proplists:get_value(node_dir,NodeInfo),
+										 Cookie)||NodeInfo<-NodeInfoList],  
+			  ErrorLoadStartNodeBasicAppls=[{error,Reason}||{error,Reason}<-LoadStartNodeBasicAppls],
+			  case ErrorLoadStartNodeBasicAppls of
+			      []->
+				  io:format("DBG: LoadStartNodeBasicAppls ~p~n",[{HostName, LoadStartNodeBasicAppls,?MODULE,?FUNCTION_NAME,?LINE}]),
+				  {ok,NodeInfoList};
+			      {error,Reason}->
+				  {error,Reason}			
+			  end
+		  end
+	  end,
+    Reply.
+    
+		  
+    
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% --------------------------------------------------------------------
+delete_cluster(ClusterName,NumNodesPerHost,Hosts,Cookie)->
+    NodeHostNameNodeNameNodeDirCookieList=lists:append([create_cluster_node_info(NumNodesPerHost,ClusterName,HostName,Cookie)||HostName<-Hosts]),
+    io:format("DBG: NodeHostNameNodeNameNodeDirCookieList ~p~n",[{NodeHostNameNodeNameNodeDirCookieList,?MODULE,?FUNCTION_NAME,?LINE}]),
+    %% Kill Nodes
+    
+    ok.
+
+
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% --------------------------------------------------------------------
 create_dir(HostName,Dir)->
+    
     Ip=config:host_local_ip(HostName),
     SshPort=config:host_ssh_port(HostName),
     Uid=config:host_uid(HostName),
@@ -52,7 +139,7 @@ create_dir(HostName,Dir)->
 	true->
 	    ok;
 	false ->
-	    {error,["failed to create ",Dir]}
+	    {error,["failed to create ",Dir,?MODULE,?FUNCTION_NAME,?LINE]}
     end.
 %% --------------------------------------------------------------------
 %% Function:start/0 
@@ -189,17 +276,18 @@ load_start_appl(Node,Appl,App,Paths)->
 %% Returns: non
 %% --------------------------------------------------------------------
 create_cluster_node_info(NumNodesPerHost,ClusterName,HostName,Cookie)->
-    create_cluster_node_info(NumNodesPerHost,ClusterName,HostName,Cookie,[]).
+    ClusterDir=ClusterName++".dir",
+    NodeInfo=create_node_info(NumNodesPerHost,ClusterName,HostName,ClusterDir,Cookie,[]),
+    {HostName,NodeInfo}.
 
-create_cluster_node_info(0,_,_,_,HostNodeNameNodeDirCookieList)->
-    HostNodeNameNodeDirCookieList;
-create_cluster_node_info(N,ClusterName,HostName,Cookie,Acc)->
+create_node_info(0,_ClusterName,_HostName,_ClusterDir,_Cookie,NodeInfo)->
+    NodeInfo;
+create_node_info(N,ClusterName,HostName,ClusterDir,Cookie,Acc)->
     NodeName=ClusterName++"_"++HostName++"_"++integer_to_list(N),
-    NodeDir=filename:join(ClusterName++".dir",NodeName++".dir"),
-    Node=list_to_atom(NodeName++"@"++HostName),
-    NewAcc=[{Node,HostName,NodeName,NodeDir,Cookie}|Acc],
-    create_cluster_node_info(N-1,ClusterName,HostName,Cookie,NewAcc). 
-
+    NodeDir=filename:join(ClusterDir,NodeName++".dir"),
+    Node=list_to_atom(NodeName++"@"++HostName),  
+    NewAcc=[[{hostname,HostName},{clustername,ClusterName},{cluster_dir,ClusterDir},{node,Node},{nodename,NodeName},{node_dir,NodeDir},{cookie,Cookie}]|Acc],
+    create_node_info(N-1,ClusterName,HostName,ClusterDir,Cookie,NewAcc).
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc
