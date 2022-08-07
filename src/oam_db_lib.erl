@@ -49,10 +49,10 @@
 %% Returns: non
 %% --------------------------------------------------------------------
 create_cluster(ClusterName,NumNodesPerHost,HostNames,Cookie)->
-    io:format("DBG: ~p~n",[{"Start of ",?MODULE,?FUNCTION_NAME,?LINE}]),
+  %  io:format("DBG: ~p~n",[{"Start of ",?MODULE,?FUNCTION_NAME,?LINE}]),
 
     StartedNodesResult=[create_cluster_on_host(ClusterName,NumNodesPerHost,HostName,Cookie)||HostName<-HostNames],
-    io:format("DBG: StartedNodesResult ~p~n",[{StartedNodesResult,?MODULE,?FUNCTION_NAME,?LINE}]),
+  %  io:format("DBG: StartedNodesResult ~p~n",[{StartedNodesResult,?MODULE,?FUNCTION_NAME,?LINE}]),
     
     % Ensure connected
     Reply=case StartedNodesResult of
@@ -61,21 +61,14 @@ create_cluster(ClusterName,NumNodesPerHost,HostNames,Cookie)->
 	      _->
 		  StartedNodes=lists:append([NodeInfoList||{ok,NodeInfoList}<-StartedNodesResult]),
 		  [FirstNodeInfo|T]=StartedNodes,
-		  io:format("DBG: FirstNodeInfo ~p~n",[{FirstNodeInfo,?MODULE,?FUNCTION_NAME,?LINE}]),
 		  FirstNode=proplists:get_value(node,FirstNodeInfo),
 		  %glur=FirstNode,
-		  Ping=[{FirstNode,proplists:get_value(node,NodeInfo),rpc:call(FirstNode,net_adm,ping,[proplists:get_value(node,NodeInfo)])}||NodeInfo<-T],
-		  io:format("DBG: Ping ~p~n",[{Ping,?MODULE,?FUNCTION_NAME,?LINE}]),
+		  _Ping=[{FirstNode,proplists:get_value(node,NodeInfo),rpc:call(FirstNode,net_adm,ping,[proplists:get_value(node,NodeInfo)])}||NodeInfo<-T],
+		 % io:format("DBG: Ping ~p~n",[{Ping,?MODULE,?FUNCTION_NAME,?LINE}]),
 		  {ok,StartedNodesResult}
 	  end,
-%    Errors=[{error,Reason}||{error,Reason}<-StartedNodes],   
-%    case Errors of
-%	[]->
-%	    glurk;
-%	_->
-%	    glurk
- %   end,
     Reply.
+
 
 create_cluster_on_host(ClusterName,NumNodesPerHost,HostName,Cookie)->
     ClusterDir=ClusterName++".dir",
@@ -113,11 +106,16 @@ create_cluster_on_host(ClusterName,NumNodesPerHost,HostName,Cookie)->
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% --------------------------------------------------------------------
-delete_cluster(ClusterName,NumNodesPerHost,Hosts,Cookie)->
-    NodeHostNameNodeNameNodeDirCookieList=lists:append([create_cluster_node_info(NumNodesPerHost,ClusterName,HostName,Cookie)||HostName<-Hosts]),
-    io:format("DBG: NodeHostNameNodeNameNodeDirCookieList ~p~n",[{NodeHostNameNodeNameNodeDirCookieList,?MODULE,?FUNCTION_NAME,?LINE}]),
-    %% Kill Nodes
+delete_cluster(ClusterName,NumNodesPerHost,HostNames,Cookie)->
+    HostNameNodeInfoList=[create_cluster_node_info(NumNodesPerHost,ClusterName,HostName,Cookie)||HostName<-HostNames],
+    % {HostName,[{hostname,HostName},{clustername,ClusterName},{cluster_dir,ClusterDir},{node,Node},{nodename,NodeName},{node_dir,NodeDir},{cookie,Cookie}]}
     
+    NodesToKill=[proplists:get_value(node,NodeInfo)||{_HostName,NodeInfoList}<-HostNameNodeInfoList,
+						     NodeInfo<-NodeInfoList],
+    io:format("DBG: NodesToKill ~p~n",[{NodesToKill,?MODULE,?FUNCTION_NAME,?LINE}]),
+    ClusterDirsToRemove=[{HostName,proplists:get_value(cluster_dir,NodeInfo)}||{HostName,NodeInfoList}<-HostNameNodeInfoList,
+													     NodeInfo<-NodeInfoList],
+    io:format("DBG: ClusterDirsToRemove ~p~n",[{ClusterDirsToRemove,?MODULE,?FUNCTION_NAME,?LINE}]),
     ok.
 
 

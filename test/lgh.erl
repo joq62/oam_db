@@ -47,19 +47,21 @@
 start()->
     ok=setup(),
  %   case oam_db:create_cluster("c1",3,["c100","c201"],"c1_cookie") of
-    case oam_db:create_cluster("c1",5,["c100","c201"],"c1_cookie") of
+    case oam_db:create_cluster("c1",2,["c100","c201"],"c1_cookie") of
 	[]->
 	    io:format("DBG: error ~p~n",[{"eexist",?MODULE,?FUNCTION_NAME,?LINE}]);
 	_->
 	    ok
 	end,
-    case oam_db:create_cluster("c2",7,["c100","c201"],"c2_cookie") of
+    case oam_db:create_cluster("c2",3,["c100","c201"],"c2_cookie") of
 	[]->
 	    io:format("DBG: error ~p~n",[{"eexist",?MODULE,?FUNCTION_NAME,?LINE}]);
 	_->
 	    ok
 	end,
-        
+    ok=oam_db:delete_cluster("c1",2,["c100","c201"],"c1_cookie"), 
+    ok=oam_db:delete_cluster("c2",3,["c100","c201"],"c2_cookie"),
+    
     io:format("TEST Ok, there you go! ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
     ok.
 

@@ -22,6 +22,7 @@
 
 -export([
 	 create_cluster/4,
+	 delete_cluster/4,
 	 create_dir/2,
 	 create_cluster_node_info/4,
 	 load_start_node_w_basic_appls/4
@@ -65,6 +66,9 @@ appl_start([])->
     application:start(?MODULE).
 
 
+
+delete_cluster(ClusterName,NumNodesPerHost,Hosts,Cookie)->
+    gen_server:call(?MODULE,{delete_cluster,ClusterName,NumNodesPerHost,Hosts,Cookie},infinity).
 
 create_cluster(ClusterName,NumNodesPerHost,Hosts,Cookie)->
     gen_server:call(?MODULE,{create_cluster,ClusterName,NumNodesPerHost,Hosts,Cookie},infinity).
@@ -125,6 +129,12 @@ init([]) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
+handle_call({delete_cluster,ClusterName,NumNodesPerHost,Hosts,Cookie},_From, State) ->
+    io:format("DBG:  ~p~n",[{ClusterName,NumNodesPerHost,Hosts,Cookie,?MODULE,?FUNCTION_NAME,?LINE}]),
+    Reply=oam_db_lib:delete_cluster(ClusterName,NumNodesPerHost,Hosts,Cookie),
+    io:format("DBG: Reply ~p~n",[{ Reply,?MODULE,?FUNCTION_NAME,?LINE}]),
+    {reply, Reply, State};
+
 handle_call({create_cluster,ClusterName,NumNodesPerHost,Hosts,Cookie},_From, State) ->
     io:format("DBG:  ~p~n",[{ClusterName,NumNodesPerHost,Hosts,Cookie,?MODULE,?FUNCTION_NAME,?LINE}]),
     Reply=oam_db_lib:create_cluster(ClusterName,NumNodesPerHost,Hosts,Cookie),
