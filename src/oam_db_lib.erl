@@ -75,7 +75,7 @@ create_cluster_on_host(ClusterName,NumNodesPerHost,HostName,Cookie)->
     Reply=case create_dir(HostName,ClusterDir) of
 	      {error,Reason}->
 		  {error,Reason};
-	      ok->
+	      {ok,ClusterDir}->
 		  io:format("DBG: CreateClusterDir ~p~n",[{HostName, ClusterDir,?MODULE,?FUNCTION_NAME,?LINE}]),
 	          NodeInfoList=create_node_info(NumNodesPerHost,ClusterName,HostName,ClusterDir,Cookie,[]),
 		  CreateNodeDir=[create_dir(HostName,proplists:get_value(node_dir,NodeInfo))||NodeInfo<-NodeInfoList],
@@ -110,14 +110,43 @@ delete_cluster(ClusterName,NumNodesPerHost,HostNames,Cookie)->
     HostNameNodeInfoList=[create_cluster_node_info(NumNodesPerHost,ClusterName,HostName,Cookie)||HostName<-HostNames],
     % {HostName,[{hostname,HostName},{clustername,ClusterName},{cluster_dir,ClusterDir},{node,Node},{nodename,NodeName},{node_dir,NodeDir},{cookie,Cookie}]}
     
+    %vKill nodes
     NodesToKill=[proplists:get_value(node,NodeInfo)||{_HostName,NodeInfoList}<-HostNameNodeInfoList,
 						     NodeInfo<-NodeInfoList],
     io:format("DBG: NodesToKill ~p~n",[{NodesToKill,?MODULE,?FUNCTION_NAME,?LINE}]),
+    [rpc:call(Node,init,stop,[])||Node<-NodesToKill],
+    
+    % Delete cluster dirs
     ClusterDirsToRemove=[{HostName,proplists:get_value(cluster_dir,NodeInfo)}||{HostName,NodeInfoList}<-HostNameNodeInfoList,
 													     NodeInfo<-NodeInfoList],
     io:format("DBG: ClusterDirsToRemove ~p~n",[{ClusterDirsToRemove,?MODULE,?FUNCTION_NAME,?LINE}]),
+    DeleteDirResult=[delete_dir(HostName,Dir)||{HostName,Dir}<-ClusterDirsToRemove],
+    io:format("DBG: DeleteDirResult ~p~n",[{DeleteDirResult,?MODULE,?FUNCTION_NAME,?LINE}]),
+  
+    
+    
+    
     ok.
 
+
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% --------------------------------------------------------------------
+delete_dir(HostName,Dir)->
+    Ip=config:host_local_ip(HostName),
+    SshPort=config:host_ssh_port(HostName),
+    Uid=config:host_uid(HostName),
+    Pwd=config:host_passwd(HostName),
+    TimeOut=5000,
+    my_ssh:ssh_send(Ip,SshPort,Uid,Pwd,"rm -rf "++Dir,TimeOut),
+    case ssh_vm:is_dir(Dir,{Ip,SshPort,Uid,Pwd,TimeOut}) of
+	false->
+	    {ok,Dir};
+	true ->
+	    {error,["failed to delete ",HostName,Dir,?MODULE,?FUNCTION_NAME,?LINE]}
+    end.
 
 %% --------------------------------------------------------------------
 %% Function:start/0 
@@ -133,9 +162,10 @@ create_dir(HostName,Dir)->
     TimeOut=5000,
     my_ssh:ssh_send(Ip,SshPort,Uid,Pwd,"rm -rf "++Dir,TimeOut),
     my_ssh:ssh_send(Ip,SshPort,Uid,Pwd,"mkdir "++Dir,TimeOut),
+    timer:sleep(2000),
     case ssh_vm:is_dir(Dir,{Ip,SshPort,Uid,Pwd,TimeOut}) of
 	true->
-	    ok;
+	    {ok,Dir};
 	false ->
 	    {error,["failed to create ",Dir,?MODULE,?FUNCTION_NAME,?LINE]}
     end.
