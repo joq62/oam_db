@@ -18,6 +18,8 @@
 %-compile(export_all).
 
 -export([
+
+	 git_load_start/3,
 	 create_cluster/4,
 	 delete_cluster/4,
 
@@ -43,6 +45,12 @@
 %% ====================================================================
 %% External functions
 %% ====================================================================
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% --------------------------------------------------------------------
+
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc
@@ -229,6 +237,7 @@ create_basic_appls(HostName,NodeName,NodeDir,Cookie,PaArgs,EnvArgs)->
 %% Returns: non
 %% --------------------------------------------------------------------
 git_load_start(Node,Appl,NodeDir)->
+    io:format("DBG ~p~n",[{rpc:call(Node,application,loaded_applications,[]),?MODULE,?FUNCTION_NAME,?LINE}]),
     DirToClone=filename:join(NodeDir,Appl),
 %    io:format("DirToClone ~p~n",[{DirToClone,?MODULE,?FUNCTION_NAME,?LINE}]),
     GitPath=config:application_gitpath(Appl++".spec"),
@@ -251,8 +260,13 @@ git_load_start(Node,Appl,NodeDir)->
 		  end
 	  end,
     Reply.
-
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% --------------------------------------------------------------------
 create_dirs_git_clone(Node,DirToClone,GitPath)->
+    io:format("DBG ~p~n",[{rpc:call(Node,application,loaded_applications,[]),?MODULE,?FUNCTION_NAME,?LINE}]),
     Reply=case rpc:call(Node,os,cmd,["rm -rf "++DirToClone]) of
 	      []->
 		  case rpc:call(Node,file,make_dir,[DirToClone]) of
@@ -278,11 +292,16 @@ create_dirs_git_clone(Node,DirToClone,GitPath)->
 		  end
 	  end,
     Reply.
-
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% --------------------------------------------------------------------
 load_start_appl(Node,Appl,App,Paths)->
+    io:format("DBG ~p~n",[{rpc:call(Node,application,loaded_applications,[]),?MODULE,?FUNCTION_NAME,?LINE}]),
     Reply=case appl:load(Node,App,Paths) of
 	      {error,Reason}->
-		  {error,[Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+		  {error,[Reason,Node,Paths,?MODULE,?FUNCTION_NAME,?LINE]};		  
 	      ok->
 		  case appl:start(Node,App) of
 		      {error,Reason}->

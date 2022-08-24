@@ -5,6 +5,6 @@
               {mod,{oam_db_app,[]}},
               {applications,[kernel,stdlib]},
               {env,[]},
-              {modules,[oam_db,oam_db_app,oam_db_lib,oam_db_sup]},
+              {modules,[oam_config,oam_db,oam_db_app,oam_db_lib,oam_db_sup]},
               {licenses,["Apache 2.0"]},
               {links,[]}]}.

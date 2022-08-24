@@ -21,8 +21,11 @@
 
 
 -export([
+	 create_config_node/1,
 	 create_cluster/4,
 	 delete_cluster/4,
+
+	 
 	 create_dir/2,
 	 create_cluster_node_info/4,
 	 load_start_node_w_basic_appls/4
@@ -66,12 +69,17 @@ appl_start([])->
     application:start(?MODULE).
 
 
+create_config_node(HostName)->
+      gen_server:call(?MODULE,{create_config_node,HostName},infinity).
+
+
+create_cluster(ClusterName,NumNodesPerHost,Hosts,Cookie)->
+    gen_server:call(?MODULE,{create_cluster,ClusterName,NumNodesPerHost,Hosts,Cookie},infinity).
 
 delete_cluster(ClusterName,NumNodesPerHost,Hosts,Cookie)->
     gen_server:call(?MODULE,{delete_cluster,ClusterName,NumNodesPerHost,Hosts,Cookie},infinity).
 
-create_cluster(ClusterName,NumNodesPerHost,Hosts,Cookie)->
-    gen_server:call(?MODULE,{create_cluster,ClusterName,NumNodesPerHost,Hosts,Cookie},infinity).
+
     
 create_dir(HostName,Dir)->
     gen_server:call(?MODULE,{create_dir,HostName,Dir},infinity).
@@ -129,6 +137,17 @@ init([]) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
+
+
+
+
+handle_call({create_config_node,HostName},_From, State) ->
+    io:format("DBG:  ~p~n",[{create_config_node,HostName,?MODULE,?FUNCTION_NAME,?LINE}]),
+    Reply=oam_config:create_config_node(HostName),
+    io:format("DBG: Reply ~p~n",[{ Reply,?MODULE,?FUNCTION_NAME,?LINE}]),
+    {reply, Reply, State};
+
+
 handle_call({delete_cluster,ClusterName,NumNodesPerHost,Hosts,Cookie},_From, State) ->
     io:format("DBG:  ~p~n",[{ClusterName,NumNodesPerHost,Hosts,Cookie,?MODULE,?FUNCTION_NAME,?LINE}]),
     Reply=oam_db_lib:delete_cluster(ClusterName,NumNodesPerHost,Hosts,Cookie),

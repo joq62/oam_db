@@ -15,8 +15,8 @@
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
--define(HostNames,["c200","c201"]).
-%-define(HostNames,["c100"]).
+%-define(HostNames,["c100","c200","c202"]).
+-define(HostNames,["c100"]).
 -define(C1,[
              {"c1_node1","c1_node1.dir","c1"},
 	     {"c1_node2","c1_node2.dir","c1"},
@@ -39,8 +39,6 @@
 		     db_deployment_info,
 		     db_deployments,
 		     db_host_spec]).
-
-
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
@@ -48,28 +46,22 @@
 %% --------------------------------------------------------------------
 start()->
     ok=setup(),
-    case oam_db:create_cluster("c1",2,?HostNames,"c1_cookie") of
-	[]->
-	    io:format("DBG: error ~p~n",[{"eexist",?MODULE,?FUNCTION_NAME,?LINE}]);
-	_->
-	    NodesC200=[c1_c200_1@c200|rpc:call(c1_c200_1@c200,erlang,nodes,[])],
-	    
-	    io:format("NoticeC200 ~p~n",[[{Node,rpc:call(Node,nodelog,read,[notice])}||Node<-NodesC200]]),
-	    io:format("WarningC200 ~p~n",[[{Node,rpc:call(Node,nodelog,read,[warning])}||Node<-NodesC200]]),
-	    io:format("AlertC200 ~p~n",[[{Node,rpc:call(Node,nodelog,read,[alert])}||Node<-NodesC200]]),
-	    init:stop()
-	    
-	end,
-    case oam_db:create_cluster("c2",3,?HostNames,"c2_cookie") of
+ %   case oam_db:create_cluster("c1",3,["c100","c201"],"c1_cookie") of
+    case oam_db:create_cluster("c1",2,["c100","c201"],"c1_cookie") of
 	[]->
 	    io:format("DBG: error ~p~n",[{"eexist",?MODULE,?FUNCTION_NAME,?LINE}]);
 	_->
 	    ok
 	end,
-    DeleteC1Dirs=oam_db:delete_cluster("c1",2,?HostNames,"c1_cookie"), 
-    io:format("DBG: DeleteC1Dirs ~p~n",[{DeleteC1Dirs,?MODULE,?FUNCTION_NAME,?LINE}]),
-    DeleteC2Dirs=oam_db:delete_cluster("c2",3,?HostNames,"c2_cookie"),
-    io:format("DBG: DeleteC2Dirs ~p~n",[{DeleteC2Dirs,?MODULE,?FUNCTION_NAME,?LINE}]),
+    case oam_db:create_cluster("c2",3,["c100","c201"],"c2_cookie") of
+	[]->
+	    io:format("DBG: error ~p~n",[{"eexist",?MODULE,?FUNCTION_NAME,?LINE}]);
+	_->
+	    ok
+	end,
+    ok=oam_db:delete_cluster("c1",2,["c100","c201"],"c1_cookie"), 
+    ok=oam_db:delete_cluster("c2",3,["c100","c201"],"c2_cookie"),
+    
     io:format("TEST Ok, there you go! ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
     ok.
 
